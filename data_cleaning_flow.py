@@ -65,7 +65,7 @@ def get_geographical_data(block_name: str) -> None:
 def combine_geo_hist_data(geo_df, hist_df):
     print("Geographical data combined with historical data")
     combined = pd.DataFrame({"geo": geo_df, "hist": hist_df})
-    time.sleep(2)
+    time.sleep(3)
     return combined
 
 
@@ -79,7 +79,7 @@ def column_detection(imputed_df):
 @task
 def upload_combined_data(final_df):
     print("Uploading")
-    time.sleep(2)
+    time.sleep(4)
     return "Good"
 
 
@@ -144,7 +144,7 @@ def data_cleaning_flow(
 
     cities = get_geographical_data.submit("geo-data-warehouse")
 
-    geo_his = combine_geo_hist_data.submit(cities, historical_dfs, wait_for=[combined])
+    geo_hist = combine_geo_hist_data.submit(cities, historical_dfs, wait_for=[combined])
 
     if combined.is_failed():
         new_raw = column_detection.submit(new_customer_data)
@@ -154,7 +154,7 @@ def data_cleaning_flow(
             historical_dfs["jaffle_shop_customer"], new_raw, return_state=True
         )
 
-    upload_combined_data.submit(combined)
+    upload_combined_data.submit(geo_hist)
 
     print("Done!")
 
