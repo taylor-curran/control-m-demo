@@ -17,6 +17,8 @@ import pandas as pd
 from io import StringIO
 from pydantic import BaseModel
 from data_ingestion import ingest_raw_customers
+from snowflake_bocks import SnowflakeConnection
+
 import time
 
 @task
@@ -75,13 +77,16 @@ default_risk_profile = RiskProfile(
     integration_failure=False
     )
 
-# @task
-# def get_geographical_data():
-#     # Get Geographical Data
-#     return 'Good'
+@task
+def get_geographical_data(block_name: str) -> None:
+    connector = SnowflakeConnection.load(block_name, validate=False)
+    new_rows = connector.read_sql("SELECT * FROM geo_data")
 
 @flow
 def load_in_historical_data():
+
+    cities = get_geographical_data('geo-data-warehouse')
+
     # Load in Block to Instantiate Block Object
     s3_block_historical_data = S3Bucket.load("raw-data-jaffle-shop")
 
