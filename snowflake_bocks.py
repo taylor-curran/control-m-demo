@@ -27,10 +27,14 @@ class SnowflakeConnection(Block):
 
     def read_sql(self, table_or_query: str) -> pd.DataFrame:
         time.sleep(1)
-        cities = pd.DataFrame({"location": ["Houston", "Austin", "Dallas", "San Antonio"]})
+        cities = pd.DataFrame(
+            {"location": ["Houston", "Austin", "Dallas", "San Antonio"]}
+        )
         return cities
 
     def load_raw_data(self, dataframe: pd.DataFrame, table_name: str) -> None:
         time.sleep(1)
-        cities = pd.DataFrame({"location": ["Houston", "Austin", "Dallas", "San Antonio"]})
+        cities = pd.DataFrame(
+            {"location": ["Houston", "Austin", "Dallas", "San Antonio"]}
+        )
         return cities
