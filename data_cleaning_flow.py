@@ -10,10 +10,12 @@ from io import StringIO
 from pydantic import BaseModel
 from data_ingestion import ingest_raw_customers
 from snowflake_bocks import SnowflakeConnection
+from prefect.tasks import task_input_hash, exponential_backoff
 import time
+from prefect_aws.s3 import S3Bucket
 
 
-@task
+@task(retries=10, retry_delay_seconds=exponential_backoff(backoff_factor=2))
 def list_s3_objects(s3_block_raw_data: S3Bucket):
     obj_dict = s3_block_raw_data.list_objects()
     objs = [obj_dict[i]["Key"] for i in range(len(obj_dict))]
@@ -21,7 +23,7 @@ def list_s3_objects(s3_block_raw_data: S3Bucket):
     return objs
 
 
-@task
+@task(cache_key_fn=task_input_hash, cache_expiration=timedelta(days=30))
 def read_csv_to_df(s3_block_raw_data: S3Bucket, object_key):
     csv = s3_block_raw_data.read_path(object_key)
     df = pd.read_csv(StringIO(csv.decode("utf-8")))
@@ -95,7 +97,7 @@ default_risk_profile = RiskProfile(
 )
 
 
-@flow
+@flow(result_storage=S3Bucket.load("result-storage"))
 def load_in_historical_data():
     # Load in Block to Instantiate Block Object
     s3_block_historical_data = S3Bucket.load("raw-data-jaffle-shop")
@@ -117,7 +119,7 @@ def load_in_historical_data():
     return historical_dfs
 
 
-@flow(log_prints=True)
+@flow(log_prints=True, result_storage=S3Bucket.load("result-storage"))
 def data_cleaning_flow(
     start_date: date = date(2020, 2, 1),
     end_date: date = date.today(),
@@ -162,11 +164,21 @@ def data_cleaning_flow(
 if __name__ == "__main__":
     data_cleaning_flow()
 
+    # data_cleaning_flow.serve(name="my-first-deployment")
+
+    data_cleaning_flow.deploy(
+        name="k8s-deployment",
+        work_pool_name="my-k8s-pool",
+        image="docker.io/taycurran/data-cleaning:demo",
+        push=False,
+        interval=360
+    )
+
     # data_cleaning_flow.deploy(
-    #     name="hello-dep",
+    #     name="triggered-deployment",
     #     work_pool_name="my-k8s-pool",
-    #     image="docker.io/taycurran/hello-m:demo",
-    #     push=True,
+    #     image="docker.io/taycurran/data-cleaning:demo",
+    #     push=False,
     #     triggers=[
     #         {
     #             "match_related": {
