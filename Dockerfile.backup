@@ -1,0 +1,5 @@
+FROM prefecthq/prefect:2.14.5-python3.11
+COPY requirements.txt /opt/prefect/control-m-demo/requirements.txt
+RUN python -m pip install -r /opt/prefect/control-m-demo/requirements.txt
+COPY . /opt/prefect/control-m-demo/
+WORKDIR /opt/prefect/control-m-demo/
