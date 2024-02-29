@@ -13,11 +13,21 @@ from snowflake_bocks import SnowflakeConnection
 from prefect.tasks import task_input_hash, exponential_backoff
 import time
 from prefect_aws.s3 import S3Bucket
+from prefect_kubernetes.jobs import KubernetesJob, KubernetesJobRun
+from r_k8s_job import r_script_kubernetes_job, v1_job_model
+
+from kubernetes.client import (
+    V1Job,
+    V1ObjectMeta,
+    V1JobSpec,
+    V1PodTemplateSpec,
+    V1PodSpec,
+    V1Container,
+)
+from kubernetes.client.models import V1DeleteOptions
 
 
-@task(
-        retries=10, 
-        retry_delay_seconds=exponential_backoff(backoff_factor=2))
+@task(retries=10, retry_delay_seconds=exponential_backoff(backoff_factor=2))
 def list_s3_objects(s3_block_raw_data: S3Bucket):
     obj_dict = s3_block_raw_data.list_objects()
     objs = [obj_dict[i]["Key"] for i in range(len(obj_dict))]
@@ -25,9 +35,7 @@ def list_s3_objects(s3_block_raw_data: S3Bucket):
     return objs
 
 
-@task(
-        cache_key_fn=task_input_hash, 
-        cache_expiration=timedelta(days=30))
+@task(cache_key_fn=task_input_hash, cache_expiration=timedelta(days=30))
 def read_csv_to_df(s3_block_raw_data: S3Bucket, object_key):
     csv = s3_block_raw_data.read_path(object_key)
     df = pd.read_csv(StringIO(csv.decode("utf-8")))
@@ -160,35 +168,39 @@ def data_cleaning_flow(
             historical_dfs["jaffle_shop_customer"], new_raw, return_state=True
         )
 
-    upload_combined_data.submit(geo_hist)
+    combined_data = upload_combined_data.submit(geo_hist)
+
+    # Launch the Kubernetes job
+    job_run = KubernetesJobRun(
+        kubernetes_job=r_script_kubernetes_job, v1_job_model=v1_job_model
+    )
 
     print("Done!")
 
 
 if __name__ == "__main__":
-    # data_cleaning_flow()
-
-    # data_cleaning_flow.serve(name="my-first-deployment")
+    data_cleaning_flow()
 
     # data_cleaning_flow.deploy(
-    #     name="k8s-deployment",
+    #     name="k8s-deployment-caraga",
     #     work_pool_name="my-k8s-pool",
     #     image="docker.io/taycurran/data-cleaning:demo",
     #     push=False,
-    #     cron=""
+    #     tags=["data-cleaning", "proj-caraga"],
+    #     cron="0 6,7,8,9,10 * * *",
     # )
 
-    data_cleaning_flow.deploy(
-        name="triggered-deployment",
-        work_pool_name="my-k8s-pool",
-        image="docker.io/taycurran/data-cleaning:demo",
-        push=False,
-        triggers=[
-            {
-                "match_related": {
-                    "prefect.resource.id": "prefect-cloud.webhook.172ec9ec-164a-4706-9f6d-ce5390acdccc"
-                },
-                "expect": {"webhook.called"},
-            }
-        ],
-    )
+    # data_cleaning_flow.deploy(
+    #     name="triggered-deployment",
+    #     work_pool_name="my-k8s-pool",
+    #     image="docker.io/taycurran/data-cleaning:demo",
+    #     push=False,
+    #     triggers=[
+    #         {
+    #             "match_related": {
+    #                 "prefect.resource.id": "prefect-cloud.webhook.172ec9ec-164a-4706-9f6d-ce5390acdccc"
+    #             },
+    #             "expect": {"webhook.called"},
+    #         }
+    #     ],
+    # )

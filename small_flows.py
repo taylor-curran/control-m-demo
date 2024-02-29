@@ -31,16 +31,11 @@ def team_analysis():
 
 
 if __name__ == "__main__":
-    customer_analysis.deploy(
-        name="on-prem-deployment",
-        work_pool_name="on-prem-work-pool",
-        interval=12000,
-        image="docker.io/taycurran/customer-data:demo",
-    )
-
     team_analysis.deploy(
         name="production-deployment",
-        work_pool_name="snowflake-cluster",
+        work_pool_name="my-docker-pool",
         cron="0 0 * * 1",
         image="docker.io/taycurran/team-data:demo",
+        push=False,
+        tags=["demo"],
     )
