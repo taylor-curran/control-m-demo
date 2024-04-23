@@ -1,7 +1,7 @@
 
 pip install -U prefect
 
-prefect cloud login --key pnb_hp2WDDqlU10i5dvGHyA3IkQL1EksCu4iRaSo --workspace prefect-sandbox/cm-demo
+prefect cloud login --key pnb_XXXXXXXXSo --workspace prefect-sandbox/cm-demo
 
 prefect deployment run 'hello-flow/hello-dep'
 
