@@ -10,4 +10,4 @@ curl https://api.prefect.cloud/hooks/ht4ngI9CxyqStVMQ5fwAjg
 
 prefect cloud workspace set --workspace prefect-sandbox/cm-demo
 
-prefect block register --file snowflake_bocks.py
+prefect block register --file snowflake_blocks.py
